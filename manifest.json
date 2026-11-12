@@ -1,0 +1,12 @@
+{
+  "background_color": "#0f172a",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "Журнал дня",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "Журнал",
+  "start_url": "/",
+  "theme_color": "#2563eb",
+  "lang": "ru"
+}
