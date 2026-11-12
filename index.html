@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Журнал дня</title>
+<script>
+/* Ставим тему до первой отрисовки — чтобы не было вспышки светлого */
+(function(){
+  var saved = localStorage.getItem('journal_theme');
+  var theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  document.documentElement.dataset.theme = theme;
+})();
+</script>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f1f5f9; --card:#ffffff; --text:#1e293b; --muted:#64748b;
+  --border:#e2e8f0; --accent:#2563eb; --accent-hover:#1d4ed8;
+  --danger:#dc2626; --radius:12px;
+  --input-bg:#f1f5f9; --input-focus-bg:#ffffff;
+  --tag-bg:#eff6ff; --tag-fg:#1d4ed8;
+  --plan-tag-bg:#f1f5f9; --plan-tag-fg:#64748b;
+  --dev-ok-bg:#dcfce7; --dev-ok-fg:#15803d;
+  --dev-warn-bg:#ffedd5; --dev-warn-fg:#c2410c;
+  --dev-bad-bg:#fee2e2; --dev-bad-fg:#b91c1c;
+  --danger-btn-bg:#fee2e2; --danger-btn-fg:#dc2626;
+  --overlay-bg:rgba(0,0,0,.6);
+  --interval-fg:#94a3b8;
+  --photo-bg:#f1f5f9;
+  --header-bg:#2563eb; --header-fg:#ffffff;
+}
+[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0f172a; --card:#1e293b; --text:#e2e8f0; --muted:#94a3b8;
+  --border:#334155; --accent:#3b82f6; --accent-hover:#60a5fa;
+  --danger:#f87171;
+  --input-bg:#0f172a; --input-focus-bg:#172033;
+  --tag-bg:rgba(59,130,246,.18); --tag-fg:#93c5fd;
+  --plan-tag-bg:#334155; --plan-tag-fg:#94a3b8;
+  --dev-ok-bg:rgba(34,197,94,.18); --dev-ok-fg:#4ade80;
+  --dev-warn-bg:rgba(249,115,22,.18); --dev-warn-fg:#fb923c;
+  --dev-bad-bg:rgba(239,68,68,.2); --dev-bad-fg:#f87171;
+  --danger-btn-bg:rgba(239,68,68,.18); --danger-btn-fg:#f87171;
+  --overlay-bg:rgba(0,0,0,.75);
+  --interval-fg:#64748b;
+  --photo-bg:#0f172a;
+  --header-bg:#1e293b; --header-fg:#e2e8f0;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:16px;padding-bottom:env(safe-area-inset-bottom);transition:background-color .15s,color .15s}
+header{position:sticky;top:0;z-index:10;background:var(--header-bg);color:var(--header-fg);padding:14px 16px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+header h1{margin:0;font-size:18px;font-weight:600}
+.header-right{display:flex;align-items:center;gap:10px}
+header .date{font-size:13px;opacity:.9}
+.theme-btn{background:transparent;border:none;font-size:20px;padding:4px 8px;cursor:pointer;line-height:1;border-radius:6px;color:inherit;transition:background .15s}
+.theme-btn:active{background:rgba(255,255,255,.15)}
+main{padding:12px;max-width:640px;margin:0 auto}
+.card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.08);transition:background-color .15s}
+.card h2{margin:0 0 12px;font-size:13px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.row{display:grid;gap:10px;margin-bottom:10px}
+.row.two{grid-template-columns:1fr 1fr}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px;font-weight:500}
+input,textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:15px;font-family:inherit;background:var(--input-bg);color:var(--text);-webkit-appearance:none}
+input:focus,textarea:focus{outline:none;border-color:var(--accent);background:var(--input-focus-bg)}
+textarea{resize:vertical;min-height:44px}
+button{padding:12px 16px;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:active{background:var(--accent-hover)}
+.btn-secondary{background:var(--input-bg);color:var(--text);border:1px solid var(--border)}
+.btn-danger{background:var(--danger-btn-bg);color:var(--danger-btn-fg)}
+.btn-row{display:flex;gap:8px}
+.btn-row button{flex:1}
+.empty{text-align:center;color:var(--muted);padding:30px 10px;font-size:14px}
+
+/* === Meal header with plan/fact === */
+.meal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;gap:8px;flex-wrap:wrap}
+.meal-head label{margin-bottom:0}
+.meal-times{display:flex;gap:8px}
+.mt-group{display:flex;flex-direction:column;gap:2px}
+.mt-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;text-align:center}
+.meal-time{width:auto;padding:6px 8px;font-size:14px;background:var(--input-bg)}
+
+/* === Entry card === */
+.entry{background:var(--card);border-radius:var(--radius);padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.08);cursor:pointer;transition:transform .1s}
+.entry:active{transform:scale(.99)}
+.entry-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;gap:8px;flex-wrap:wrap}
+.entry-date{font-weight:700;font-size:15px;white-space:nowrap}
+.entry-times{color:var(--muted);font-size:13px;text-align:right;white-space:nowrap}
+.entry-stats{display:flex;gap:14px;margin-bottom:6px;font-size:13px;color:var(--muted);flex-wrap:wrap}
+.entry-stats b{color:var(--text)}
+.entry-meals{font-size:13px;color:var(--muted);line-height:1.55}
+.entry-meals b{color:var(--text);font-weight:500}
+.entry-meal{margin-bottom:6px}
+.entry-meal:last-child{margin-bottom:0}
+
+/* === Badges === */
+.meal-time-tag{display:inline-block;background:var(--tag-bg);color:var(--tag-fg);padding:1px 6px;border-radius:4px;font-size:12px;font-weight:600;margin-left:4px}
+.meal-time-plan{background:var(--plan-tag-bg);color:var(--plan-tag-fg);font-style:italic;font-weight:500}
+.dev{margin-left:4px;font-size:11px;font-weight:700;padding:1px 5px;border-radius:3px;display:inline-block;vertical-align:1px}
+.dev-ok{color:var(--dev-ok-fg);background:var(--dev-ok-bg)}
+.dev-warn{color:var(--dev-warn-fg);background:var(--dev-warn-bg)}
+.dev-bad{color:var(--dev-bad-fg);background:var(--dev-bad-bg)}
+.meal-interval{font-size:11px;color:var(--interval-fg);padding:3px 8px;font-style:italic;text-align:center}
+
+/* === Photos === */
+.photo-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.photo-chip{position:relative;width:64px;height:64px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--photo-bg)}
+.photo-chip img{width:100%;height:100%;object-fit:cover;display:block}
+.photo-x{position:absolute;top:2px;right:2px;width:22px;height:22px;padding:0;border:none;border-radius:50%;background:rgba(0,0,0,.7);color:#fff;font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.photo-add{padding:0;width:64px;height:64px;border:2px dashed var(--border);border-radius:8px;background:transparent;color:var(--muted);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:500;line-height:1.2}
+.photo-add:active{border-color:var(--accent);color:var(--accent)}
+.photo-strip{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.photo-thumb{width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:pointer;background:var(--photo-bg);display:block}
+
+/* === Viewer === */
+.viewer{position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;z-index:1000;cursor:pointer;padding:16px;animation:fadein .15s}
+.viewer img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
+
+/* === Summary modal === */
+.summary-overlay{position:fixed;inset:0;background:var(--overlay-bg);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px;animation:fadein .15s}
+.summary-modal{background:var(--card);color:var(--text);border-radius:12px;padding:20px;max-width:100%;width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.summary-modal h2{margin:0 0 6px;font-size:18px}
+.summary-modal .period{color:var(--muted);font-size:13px;margin:0 0 16px}
+.summary-modal table{width:100%;border-collapse:collapse;margin-bottom:16px;font-size:14px}
+.summary-modal th{text-align:left;font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;padding:6px 4px;border-bottom:2px solid var(--border)}
+.summary-modal th:not(:first-child){text-align:right}
+.summary-modal td{padding:9px 4px;border-bottom:1px solid var(--border);vertical-align:top}
+.summary-modal td:not(:first-child){text-align:right}
+.summary-modal td:first-child{color:var(--text);font-weight:500}
+.summary-modal td:nth-child(2){font-weight:600}
+.summary-modal td:nth-child(3){color:var(--muted);font-size:13px}
+.summary-modal .empty-msg{text-align:center;color:var(--muted);padding:30px 0}
+
+/* === Toast === */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:10px 20px;border-radius:8px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:100;max-width:90%;border:1px solid rgba(255,255,255,.1)}
+.toast.show{opacity:1}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Журнал дня</h1>
+  <div class="header-right">
+    <div class="date" id="today"></div>
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Сменить тему">🌙</button>
+  </div>
+</header>
+<main>
+  <div class="card">
+    <h2 id="formTitle">Новая запись</h2>
+    <div class="row">
+      <div><label for="date">Дата</label><input type="date" id="date"></div>
+    </div>
+
+    <div class="row two">
+      <div><label for="wakePlan">Подъём, план</label><input type="time" id="wakePlan"></div>
+      <div><label for="wake">Подъём, факт</label><input type="time" id="wake"></div>
+    </div>
+    <div class="row two">
+      <div><label for="bedPlan">Отбой, план</label><input type="time" id="bedPlan"></div>
+      <div><label for="bed">Отбой, факт</label><input type="time" id="bed"></div>
+    </div>
+
+    <div class="row two">
+      <div><label for="weight">Вес, кг</label><input type="number" id="weight" step="0.1" min="20" max="400" inputmode="decimal" placeholder="70.5"></div>
+      <div><label for="steps">Шаги</label><input type="number" id="steps" min="0" inputmode="numeric" placeholder="8500"></div>
+    </div>
+
+    <div class="row">
+      <div class="meal-head">
+        <label for="breakfast">Завтрак</label>
+        <div class="meal-times">
+          <div class="mt-group"><span class="mt-label">план</span><input type="time" id="breakfastPlan" class="meal-time"></div>
+          <div class="mt-group"><span class="mt-label">факт</span><input type="time" id="breakfastTime" class="meal-time"></div>
+        </div>
+      </div>
+      <textarea id="breakfast" rows="2" placeholder="Что было на завтрак"></textarea>
+      <div class="photo-row" id="photos-breakfast"></div>
+      <input type="file" id="file-breakfast" accept="image/*" multiple style="display:none">
+    </div>
+
+    <div class="row">
+      <div class="meal-head">
+        <label for="lunch">Обед</label>
+        <div class="meal-times">
+          <div class="mt-group"><span class="mt-label">план</span><input type="time" id="lunchPlan" class="meal-time"></div>
+          <div class="mt-group"><span class="mt-label">факт</span><input type="time" id="lunchTime" class="meal-time"></div>
+        </div>
+      </div>
+      <textarea id="lunch" rows="2" placeholder="Что было на обед"></textarea>
+      <div class="photo-row" id="photos-lunch"></div>
+      <input type="file" id="file-lunch" accept="image/*" multiple style="display:none">
+    </div>
+
+    <div class="row">
+      <div class="meal-head">
+        <label for="snack">Полдник</label>
+        <div class="meal-times">
+          <div class="mt-group"><span class="mt-label">план</span><input type="time" id="snackPlan" class="meal-time"></div>
+          <div class="mt-group"><span class="mt-label">факт</span><input type="time" id="snackTime" class="meal-time"></div>
+        </div>
+      </div>
+      <textarea id="snack" rows="2" placeholder="Что было на полдник"></textarea>
+      <div class="photo-row" id="photos-snack"></div>
+      <input type="file" id="file-snack" accept="image/*" multiple style="display:none">
+    </div>
+
+    <div class="row">
+      <div class="meal-head">
+        <label for="dinner">Ужин</label>
+        <div class="meal-times">
+          <div class="mt-group"><span class="mt-label">план</span><input type="time" id="dinnerPlan" class="meal-time"></div>
+          <div class="mt-group"><span class="mt-label">факт</span><input type="time" id="dinnerTime" class="meal-time"></div>
+        </div>
+      </div>
+      <textarea id="dinner" rows="2" placeholder="Что было на ужин"></textarea>
+      <div class="photo-row" id="photos-dinner"></div>
+      <input type="file" id="file-dinner" accept="image/*" multiple style="display:none">
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-primary" onclick="saveForm()">Сохранить</button>
+      <button class="btn-secondary" onclick="clearForm()">Очистить</button>
+      <button class="btn-danger" id="deleteBtn" onclick="deleteCurrent()" style="display:none">Удалить</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>История</h2>
+    <button class="btn-primary" style="width:100%;margin-bottom:12px" onclick="showWeeklySummary()">📊 Сводка за 7 дней</button>
+    <div class="btn-row" style="margin-bottom:12px">
+      <button class="btn-secondary" onclick="exportCSV()">Экспорт CSV</button>
+      <button class="btn-secondary" onclick="document.getElementById('importFile').click()">Импорт CSV</button>
+    </div>
+    <input type="file" id="importFile" accept=".csv,text/csv" style="display:none" onchange="importCSV(event)">
+    <div id="entries"></div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ Тема ============ */
+const THEME_KEY = 'journal_theme';
+function applyTheme(t){
+  document.documentElement.dataset.theme = t;
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.textContent = t === 'dark' ? '☀️' : '🌙';
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if(meta) meta.setAttribute('content', t === 'dark' ? '#1e293b' : '#2563eb');
+}
+function toggleTheme(){
+  const cur = document.documentElement.dataset.theme || 'light';
+  const next = cur === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+  localStorage.setItem(THEME_KEY, next);
+}
+
+/* ============ IndexedDB для фото ============ */
+const PHOTO_DB='journal_photos_v1';
+const PHOTO_STORE='photos';
+let _dbPromise;
+function photoDB(){
+  if(!_dbPromise) _dbPromise = new Promise((res,rej)=>{
+    const req = indexedDB.open(PHOTO_DB, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(PHOTO_STORE);
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+  return _dbPromise;
+}
+async function putPhoto(id, blob){
+  const db = await photoDB();
+  return new Promise((res,rej)=>{
+    const tx = db.transaction(PHOTO_STORE,'readwrite');
+    tx.objectStore(PHOTO_STORE).put(blob, id);
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+  });
+}
+async function getPhoto(id){
+  const db = await photoDB();
+  return new Promise((res,rej)=>{
+    const tx = db.transaction(PHOTO_STORE,'readonly');
+    const r = tx.objectStore(PHOTO_STORE).get(id);
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+async function delPhoto(id){
+  const db = await photoDB();
+  return new Promise((res,rej)=>{
+    const tx = db.transaction(PHOTO_STORE,'readwrite');
+    tx.objectStore(PHOTO_STORE).delete(id);
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+  });
+}
+
+/* ============ Сжатие ============ */
+async function compressImage(file, maxDim=1200, quality=0.75){
+  let source;
+  try{ source = await createImageBitmap(file, {imageOrientation:'from-image'}); }
+  catch(e){
+    source = await new Promise((res,rej)=>{
+      const r = new FileReader();
+      r.onload = ()=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=r.result;};
+      r.onerror = rej; r.readAsDataURL(file);
+    });
+  }
+  const srcW = source.width || source.naturalWidth;
+  const srcH = source.height || source.naturalHeight;
+  let w = srcW, h = srcH;
+  if(w > maxDim || h > maxDim){
+    const ratio = Math.min(maxDim/w, maxDim/h);
+    w = Math.round(w*ratio); h = Math.round(h*ratio);
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  canvas.getContext('2d').drawImage(source, 0, 0, w, h);
+  return new Promise(res => canvas.toBlob(b=>res(b), 'image/jpeg', quality));
+}
+
+/* ============ Константы ============ */
+const KEY='journal_entries_v3';
+const OLD_KEY_V2='journal_entries_v2';
+const OLD_KEY_V1='journal_entries_v1';
+const MEALS = ['breakfast','lunch','snack','dinner'];
+const MEAL_LABELS = {breakfast:'Завтрак',lunch:'Обед',snack:'Полдник',dinner:'Ужин'};
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const isoDate = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const todayISO = () => isoDate(new Date());
+const fmtDate = iso => {const[y,m,d]=iso.split('-');return`${d}.${m}.${y}`};
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const ALL_FORM_FIELDS = ['date',
+  'wakePlan','wake','bedPlan','bed','weight','steps',
+  'breakfastPlan','breakfastTime','breakfast',
+  'lunchPlan','lunchTime','lunch',
+  'snackPlan','snackTime','snack',
+  'dinnerPlan','dinnerTime','dinner'];
+
+(function migrate(){
+  if(localStorage.getItem(KEY)) return;
+  const src = localStorage.getItem(OLD_KEY_V2) || localStorage.getItem(OLD_KEY_V1);
+  if(!src) return;
+  try{
+    const arr = JSON.parse(src).map(e=>({
+      ...e,
+      wakePlan:e.wakePlan||'', bedPlan:e.bedPlan||'',
+      breakfastPlan:e.breakfastPlan||'', lunchPlan:e.lunchPlan||'',
+      snackPlan:e.snackPlan||'', dinnerPlan:e.dinnerPlan||''
+    }));
+    localStorage.setItem(KEY, JSON.stringify(arr));
+  }catch{}
+})();
+
+const load = () => {try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch{return[]}};
+const save = a => localStorage.setItem(KEY, JSON.stringify(a));
+
+/* ============ Время ============ */
+function minutesFromMidnight(t){
+  if(!t || !t.includes(':')) return null;
+  const [h,m] = t.split(':').map(Number);
+  if(isNaN(h)||isNaN(m)) return null;
+  return h*60 + m;
+}
+function timeDiff(plan, fact){
+  const p = minutesFromMidnight(plan), f = minutesFromMidnight(fact);
+  if(p === null || f === null) return null;
+  let d = f - p;
+  if(d > 12*60) d -= 24*60;
+  if(d < -12*60) d += 24*60;
+  return d;
+}
+function timeInterval(t1, t2){
+  const a = minutesFromMidnight(t1), b = minutesFromMidnight(t2);
+  if(a === null || b === null) return null;
+  let d = b - a;
+  if(d < 0) d += 24*60;
+  return d;
+}
+function sleepDurationMins(wake, bed){
+  const w = minutesFromMidnight(wake), b = minutesFromMidnight(bed);
+  if(w === null || b === null) return null;
+  let d = w - b;
+  if(d <= 0) d += 24*60;
+  return d;
+}
+function formatDuration(mins){
+  if(mins === null || mins === undefined) return '';
+  const h = Math.floor(mins/60), m = Math.round(mins%60);
+  if(h === 0) return `${m} мин`;
+  if(m === 0) return `${h} ч`;
+  return `${h} ч ${m} мин`;
+}
+function formatDiffHtml(mins){
+  if(mins === null || mins === undefined) return '';
+  const abs = Math.abs(mins);
+  if(abs < 1) return ' <span class="dev dev-ok">✓</span>';
+  const sign = mins > 0 ? '+' : '−';
+  const h = Math.floor(abs/60), m = Math.round(abs%60);
+  const text = h === 0 ? `${sign}${m}` : (m === 0 ? `${sign}${h}ч` : `${sign}${h}ч${m}`);
+  const cls = abs <= 5 ? 'dev-ok' : abs <= 30 ? 'dev-warn' : 'dev-bad';
+  return ` <span class="dev ${cls}" title="${sign}${Math.round(abs)} мин">${text}</span>`;
+}
+
+/* ============ ObjectURL ============ */
+let activeUrls = [];
+const trackUrl = u => {activeUrls.push(u);return u;};
+function revokeAllUrls(){for(const u of activeUrls) URL.revokeObjectURL(u);activeUrls=[];}
+
+/* ============ Toast ============ */
+let toastTimer;
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),1800);
+}
+
+/* ============ Фото в форме ============ */
+let formPhotos = {breakfast:[],lunch:[],snack:[],dinner:[]};
+let photosReady = Promise.resolve();
+let editingId = null;
+
+function renderFormPhotos(){
+  for(const meal of MEALS){
+    const strip = document.getElementById('photos-'+meal);
+    strip.innerHTML='';
+    for(const p of formPhotos[meal]){
+      const wrap = document.createElement('div');
+      wrap.className='photo-chip';
+      wrap.dataset.photoId = p.id;
+      const img = document.createElement('img');
+      if(p.url) img.src = p.url;
+      wrap.appendChild(img);
+      const x = document.createElement('button');
+      x.type='button'; x.className='photo-x'; x.textContent='×';
+      x.onclick = (e)=>{e.preventDefault();e.stopPropagation();removeFormPhoto(meal,p.id);};
+      wrap.appendChild(x);
+      strip.appendChild(wrap);
+    }
+    const addBtn = document.createElement('button');
+    addBtn.type='button'; addBtn.className='photo-add'; addBtn.textContent='+ Фото';
+    addBtn.onclick = ()=>document.getElementById('file-'+meal).click();
+    strip.appendChild(addBtn);
+  }
+}
+
+async function onPhotoSelected(meal, ev){
+  const files = ev.target.files;
+  if(!files || !files.length) return;
+  for(const file of files){
+    if(!file.type.startsWith('image/')) continue;
+    try{
+      const blob = await compressImage(file);
+      formPhotos[meal].push({id:uid(), url:URL.createObjectURL(blob), blob, isNew:true});
+    }catch(e){console.error(e);toast('Не удалось обработать фото');}
+  }
+  ev.target.value='';
+  renderFormPhotos();
+}
+
+function removeFormPhoto(meal, id){
+  const arr = formPhotos[meal];
+  const idx = arr.findIndex(p=>p.id===id);
+  if(idx>=0){
+    if(arr[idx].url) URL.revokeObjectURL(arr[idx].url);
+    arr.splice(idx,1);
+    renderFormPhotos();
+  }
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  for(const meal of MEALS){
+    document.getElementById('file-'+meal).addEventListener('change', (ev)=>onPhotoSelected(meal, ev));
+  }
+});
+
+/* ============ Карточка ============ */
+function renderList(){
+  revokeAllUrls();
+  const entries = load().sort((a,b)=>b.date.localeCompare(a.date));
+  const el = document.getElementById('entries');
+  el.innerHTML = '';
+  if(!entries.length){
+    el.innerHTML='<div class="empty">Пока нет записей.<br>Заполните форму выше и нажмите «Сохранить».</div>';
+    return;
+  }
+  for(const e of entries) el.appendChild(buildCard(e));
+}
+
+function buildCard(e){
+  const card = document.createElement('div');
+  card.className='entry';
+  card.onclick = ()=>editEntry(e.id);
+
+  const wakeDev = timeDiff(e.wakePlan, e.wake);
+  const bedDev = timeDiff(e.bedPlan, e.bed);
+  const wakeStr = e.wake ? `↑ ${esc(e.wake)}${formatDiffHtml(wakeDev)}` : (e.wakePlan ? `↑ план ${esc(e.wakePlan)}` : '');
+  const bedStr = e.bed ? `↓ ${esc(e.bed)}${formatDiffHtml(bedDev)}` : (e.bedPlan ? `↓ план ${esc(e.bedPlan)}` : '');
+  const times = [wakeStr, bedStr].filter(Boolean).join('   ');
+
+  const head = document.createElement('div');
+  head.className='entry-head';
+  head.innerHTML = `<span class="entry-date">${fmtDate(e.date)}</span>${times?`<span class="entry-times">${times}</span>`:''}`;
+  card.appendChild(head);
+
+  const sleep = sleepDurationMins(e.wake, e.bed);
+  const stats = [];
+  if(e.weight!=='' && e.weight!=null) stats.push(`<span>Вес: <b>${esc(e.weight)} кг</b></span>`);
+  if(e.steps!=='' && e.steps!=null) stats.push(`<span>Шаги: <b>${esc(e.steps)}</b></span>`);
+  if(sleep !== null) stats.push(`<span>Сон: <b>${formatDuration(sleep)}</b></span>`);
+  if(stats.length){
+    const s = document.createElement('div');
+    s.className='entry-stats';
+    s.innerHTML = stats.join('');
+    card.appendChild(s);
+  }
+
+  const photos = e.photos || {};
+  const mealsEl = document.createElement('div');
+  mealsEl.className='entry-meals';
+  let anyMeal = false;
+  let lastTime = null;
+
+  for(const meal of MEALS){
+    const text = (e[meal]||'').trim();
+    const fact = (e[meal+'Time']||'').trim();
+    const plan = (e[meal+'Plan']||'').trim();
+    const ids = photos[meal] || [];
+    if(!text && !fact && !plan && !ids.length) continue;
+
+    const mealTime = fact || plan;
+    if(lastTime && mealTime){
+      const mins = timeInterval(lastTime, mealTime);
+      if(mins !== null && mins > 0){
+        const intervalEl = document.createElement('div');
+        intervalEl.className='meal-interval';
+        intervalEl.textContent = `⏱ ${formatDuration(mins)}`;
+        mealsEl.appendChild(intervalEl);
+      }
+    }
+
+    anyMeal = true;
+    const row = document.createElement('div');
+    row.className='entry-meal';
+
+    let timeTag = '';
+    if(fact && plan){
+      timeTag = `<span class="meal-time-tag">${esc(fact)}${formatDiffHtml(timeDiff(plan, fact))}</span>`;
+    }else if(fact){
+      timeTag = `<span class="meal-time-tag">${esc(fact)}</span>`;
+    }else if(plan){
+      timeTag = `<span class="meal-time-tag meal-time-plan">план ${esc(plan)}</span>`;
+    }
+    if(text || timeTag){
+      const t = document.createElement('div');
+      t.innerHTML = `<b>${MEAL_LABELS[meal]}</b>${timeTag}${text?': '+esc(text):''}`;
+      row.appendChild(t);
+    }
+
+    if(ids.length){
+      const strip = document.createElement('div');
+      strip.className='photo-strip';
+      for(const pid of ids){
+        const img = document.createElement('img');
+        img.className='photo-thumb';
+        img.dataset.photoId = pid;
+        img.onclick = (ev)=>{ev.stopPropagation();openViewer(pid);};
+        strip.appendChild(img);
+        getPhoto(pid).then(blob=>{
+          if(blob && img.isConnected) img.src = trackUrl(URL.createObjectURL(blob));
+        }).catch(()=>{});
+      }
+      row.appendChild(strip);
+    }
+    mealsEl.appendChild(row);
+    if(mealTime) lastTime = mealTime;
+  }
+  if(anyMeal) card.appendChild(mealsEl);
+  return card;
+}
+
+async function openViewer(photoId){
+  try{
+    const blob = await getPhoto(photoId);
+    if(!blob) return;
+    const url = URL.createObjectURL(blob);
+    const overlay = document.createElement('div');
+    overlay.className='viewer';
+    const img = document.createElement('img');
+    img.src = url;
+    overlay.appendChild(img);
+    overlay.onclick = ()=>{overlay.remove();URL.revokeObjectURL(url);};
+    document.body.appendChild(overlay);
+  }catch(e){console.error(e);}
+}
+
+/* ============ Форма ============ */
+function clearForm(){
+  editingId = null;
+  for(const meal of MEALS){
+    for(const p of formPhotos[meal]) if(p.url) URL.revokeObjectURL(p.url);
+  }
+  formPhotos = {breakfast:[],lunch:[],snack:[],dinner:[]};
+  photosReady = Promise.resolve();
+  document.getElementById('formTitle').textContent='Новая запись';
+  document.getElementById('deleteBtn').style.display='none';
+  for(const f of ALL_FORM_FIELDS){
+    const el = document.getElementById(f);
+    if(el) el.value = (f==='date') ? todayISO() : '';
+  }
+  renderFormPhotos();
+}
+
+async function editEntry(id){
+  const entry = load().find(e=>e.id===id);
+  if(!entry) return;
+
+  editingId = id;
+  for(const meal of MEALS){
+    for(const p of formPhotos[meal]) if(p.url) URL.revokeObjectURL(p.url);
+  }
+  formPhotos = {breakfast:[],lunch:[],snack:[],dinner:[]};
+
+  document.getElementById('formTitle').textContent='Редактирование за '+fmtDate(entry.date);
+  document.getElementById('deleteBtn').style.display='';
+  for(const f of ALL_FORM_FIELDS){
+    const el = document.getElementById(f);
+    if(el) el.value = entry[f] ?? '';
+  }
+
+  const photos = entry.photos || {};
+  const loads = [];
+  for(const meal of MEALS){
+    for(const photoId of (photos[meal]||[])){
+      const p = {id:photoId, url:null, isNew:false};
+      formPhotos[meal].push(p);
+      loads.push(
+        getPhoto(photoId).then(blob=>{
+          if(!blob) return;
+          if(!formPhotos[meal].includes(p)) return;
+          p.url = URL.createObjectURL(blob);
+          const img = document.querySelector(`.photo-chip[data-photo-id="${photoId}"] img`);
+          if(img) img.src = p.url;
+        }).catch(()=>{})
+      );
+    }
+  }
+  photosReady = Promise.all(loads);
+  renderFormPhotos();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+async function deleteCurrent(){
+  if(!editingId) return;
+  if(!confirm('Удалить эту запись?')) return;
+  const entry = load().find(e=>e.id===editingId);
+  if(entry?.photos){
+    for(const meal of MEALS){
+      for(const id of (entry.photos[meal]||[])) await delPhoto(id);
+    }
+  }
+  save(load().filter(e=>e.id!==editingId));
+  clearForm();
+  renderList();
+  toast('Удалено');
+}
+
+async function saveForm(){
+  const date = document.getElementById('date').value;
+  if(!date){toast('Укажите дату');return;}
+
+  let existingEntry = null;
+  if(editingId){
+    existingEntry = load().find(e=>e.id===editingId);
+  }else{
+    const byDate = load().find(e=>e.date===date);
+    if(byDate){
+      if(!confirm(`Запись за ${fmtDate(date)} уже есть. Заменить?`)) return;
+      existingEntry = byDate;
+    }
+  }
+
+  await photosReady;
+
+  const photoIds = {breakfast:[],lunch:[],snack:[],dinner:[]};
+  for(const meal of MEALS){
+    for(const p of formPhotos[meal]){
+      if(p.isNew && p.blob) await putPhoto(p.id, p.blob);
+      photoIds[meal].push(p.id);
+    }
+  }
+
+  const oldPhotos = existingEntry?.photos || {};
+  for(const meal of MEALS){
+    for(const id of (oldPhotos[meal]||[])){
+      if(!photoIds[meal].includes(id)) await delPhoto(id);
+    }
+  }
+
+  const get = id => document.getElementById(id).value;
+  const entry = {
+    id: editingId || existingEntry?.id || uid(),
+    date,
+    wakePlan: get('wakePlan'), wake: get('wake'),
+    bedPlan: get('bedPlan'), bed: get('bed'),
+    weight: get('weight'), steps: get('steps'),
+    breakfastPlan: get('breakfastPlan'), breakfastTime: get('breakfastTime'),
+    breakfast: document.getElementById('breakfast').value.trim(),
+    lunchPlan: get('lunchPlan'), lunchTime: get('lunchTime'),
+    lunch: document.getElementById('lunch').value.trim(),
+    snackPlan: get('snackPlan'), snackTime: get('snackTime'),
+    snack: document.getElementById('snack').value.trim(),
+    dinnerPlan: get('dinnerPlan'), dinnerTime: get('dinnerTime'),
+    dinner: document.getElementById('dinner').value.trim(),
+    photos: photoIds
+  };
+
+  let entries = load();
+  if(existingEntry){
+    entries = entries.map(e=>e.id===entry.id ? entry : e);
+  }else{
+    entries.push(entry);
+  }
+  save(entries);
+  toast('Сохранено');
+  clearForm();
+  renderList();
+}
+
+/* ============ Сводка ============ */
+function showWeeklySummary(){
+  const entries = load();
+  const today = new Date();
+  const sevenAgo = new Date(today);
+  sevenAgo.setDate(sevenAgo.getDate() - 6);
+  const todayStr = isoDate(today);
+  const sevenAgoStr = isoDate(sevenAgo);
+  const filtered = entries.filter(e => e.date >= sevenAgoStr && e.date <= todayStr);
+
+  const overlay = document.createElement('div');
+  overlay.className = 'summary-overlay';
+  overlay.onclick = (e) => { if(e.target === overlay) overlay.remove(); };
+
+  let content;
+  if(!filtered.length){
+    content = `
+      <h2>Сводка за 7 дней</h2>
+      <p class="period">${fmtDate(sevenAgoStr)} — ${fmtDate(todayStr)}</p>
+      <p class="empty-msg">Нет записей за этот период.</p>
+      <button class="btn-secondary" style="width:100%" onclick="this.closest('.summary-overlay').remove()">Закрыть</button>`;
+  }else{
+    const wake=[], wakePlan=[], bed=[], bedPlan=[];
+    const weight=[], steps=[], sleepMins=[];
+    const mealFact={breakfast:[],lunch:[],snack:[],dinner:[]};
+    const mealPlan={breakfast:[],lunch:[],snack:[],dinner:[]};
+
+    for(const e of filtered){
+      if(e.wake) wake.push(e.wake);
+      if(e.wakePlan) wakePlan.push(e.wakePlan);
+      if(e.bed) bed.push(e.bed);
+      if(e.bedPlan) bedPlan.push(e.bedPlan);
+      if(e.weight!=='' && e.weight!=null) weight.push(parseFloat(e.weight));
+      if(e.steps!=='' && e.steps!=null) steps.push(parseInt(e.steps));
+      const s = sleepDurationMins(e.wake, e.bed);
+      if(s !== null) sleepMins.push(s);
+      for(const m of MEALS){
+        if(e[m+'Time']) mealFact[m].push(e[m+'Time']);
+        if(e[m+'Plan']) mealPlan[m].push(e[m+'Plan']);
+      }
+    }
+
+    const rows = [];
+    rows.push(summaryTimeRow('Подъём', wake, wakePlan, false));
+    rows.push(summaryTimeRow('Отбой', bed, bedPlan, true));
+    rows.push(summarySimpleRow('Сон', sleepMins.length ? formatDuration(Math.round(avg(sleepMins))) : '—'));
+    for(const m of MEALS) rows.push(summaryTimeRow(MEAL_LABELS[m], mealFact[m], mealPlan[m], false));
+    rows.push(summarySimpleRow('Вес', weight.length ? avg(weight).toFixed(1) + ' кг' : '—'));
+    rows.push(summarySimpleRow('Шаги', steps.length ? Math.round(avg(steps)).toLocaleString('ru-RU') : '—'));
+
+    content = `
+      <h2>Сводка за 7 дней</h2>
+      <p class="period">${fmtDate(sevenAgoStr)} — ${fmtDate(todayStr)} · записей: ${filtered.length}</p>
+      <table>
+        <thead><tr><th>Показатель</th><th>Факт</th><th>План</th></tr></thead>
+        <tbody>${rows.join('')}</tbody>
+      </table>
+      <button class="btn-secondary" style="width:100%" onclick="this.closest('.summary-overlay').remove()">Закрыть</button>`;
+  }
+
+  overlay.innerHTML = `<div class="summary-modal">${content}</div>`;
+  document.body.appendChild(overlay);
+}
+
+function avg(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0; }
+
+function avgTimeList(times, isBed){
+  if(!times.length) return null;
+  const mins = times.map(t=>{
+    const [h,m] = t.split(':').map(Number);
+    let v = h*60 + m;
+    if(isBed && h < 12) v += 24*60;
+    return v;
+  });
+  return avg(mins);
+}
+function formatTimeFromMins(mins){
+  if(mins === null || mins === undefined) return '—';
+  const r = Math.round(mins) % (24*60);
+  const h = Math.floor(r/60), m = r % 60;
+  return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+}
+function summaryTimeRow(label, factList, planList, isBed){
+  const factAvg = avgTimeList(factList, isBed);
+  const planAvg = avgTimeList(planList, isBed);
+  const diff = (factAvg !== null && planAvg !== null) ? formatDiffHtml(Math.round(factAvg - planAvg)) : '';
+  return `<tr><td>${label}</td><td>${formatTimeFromMins(factAvg)}${diff}</td><td>${formatTimeFromMins(planAvg)}</td></tr>`;
+}
+function summarySimpleRow(label, value){
+  return `<tr><td>${label}</td><td>${value}</td><td>—</td></tr>`;
+}
+
+/* ============ CSV ============ */
+function exportCSV(){
+  const entries = load().sort((a,b)=>a.date.localeCompare(b.date));
+  if(!entries.length){toast('Нет данных');return;}
+  const q = v => {v=v==null?'':String(v);return /[";\n\r]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v;};
+  const rows=[['Дата',
+    'Подъём план','Подъём','Отбой план','Отбой','Вес','Шаги',
+    'Завтрак план','Время завтрака','Завтрак',
+    'Обед план','Время обеда','Обед',
+    'Полдник план','Время полдника','Полдник',
+    'Ужин план','Время ужина','Ужин','Фото']];
+  for(const e of entries){
+    const p = e.photos || {};
+    const cnt = MEALS.reduce((s,k)=>s+(p[k]?.length||0),0);
+    rows.push([
+      e.date,
+      e.wakePlan||'',e.wake||'',e.bedPlan||'',e.bed||'',e.weight||'',e.steps||'',
+      e.breakfastPlan||'',e.breakfastTime||'',e.breakfast||'',
+      e.lunchPlan||'',e.lunchTime||'',e.lunch||'',
+      e.snackPlan||'',e.snackTime||'',e.snack||'',
+      e.dinnerPlan||'',e.dinnerTime||'',e.dinner||'',
+      cnt||''
+    ]);
+  }
+  const csv = '\uFEFF' + rows.map(r=>r.map(q).join(';')).join('\r\n');
+  const blob = new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');a.href=url;a.download='journal_'+todayISO()+'.csv';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  toast('Файл сохранён');
+}
+
+function importCSV(ev){
+  const file=ev.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const lines=e.target.result.split(/\r?\n/).filter(l=>l.trim());
+      if(lines.length<2)throw new Error('Файл пуст');
+      const parseLine=line=>{
+        const out=[];let cur='',q=false;
+        for(let i=0;i<line.length;i++){
+          const c=line[i];
+          if(q){if(c==='"'&&line[i+1]==='"'){cur+='"';i++;}else if(c==='"')q=false;else cur+=c;}
+          else{if(c==='"')q=true;else if(c===';'){out.push(cur);cur='';}else cur+=c;}
+        }
+        out.push(cur);return out;
+      };
+      const header=parseLine(lines[0]).map(s=>s.trim());
+      const find=(...names)=>{for(const n of names){const i=header.indexOf(n);if(i>=0)return i;}return -1;};
+      const idx={
+        date: find('Дата'),
+        wakePlan: find('Подъём план'),
+        wake: find('Подъём', 'Подъём факт'),
+        bedPlan: find('Отбой план'),
+        bed: find('Отбой', 'Отбой факт'),
+        weight: find('Вес'),
+        steps: find('Шаги'),
+        breakfastPlan: find('Завтрак план'),
+        breakfastTime: find('Время завтрака', 'Завтрак факт'),
+        breakfast: find('Завтрак'),
+        lunchPlan: find('Обед план'),
+        lunchTime: find('Время обеда', 'Обед факт'),
+        lunch: find('Обед'),
+        snackPlan: find('Полдник план'),
+        snackTime: find('Время полдника', 'Полдник факт'),
+        snack: find('Полдник'),
+        dinnerPlan: find('Ужин план'),
+        dinnerTime: find('Время ужина', 'Ужин факт'),
+        dinner: find('Ужин')
+      };
+      if(idx.date<0)throw new Error('Нет колонки "Дата"');
+      const entries=load();
+      let added=0;
+      for(let i=1;i<lines.length;i++){
+        const c=parseLine(lines[i]);
+        const date=(c[idx.date]||'').trim();
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(date))continue;
+        const get=k=>idx[k]>=0?(c[idx[k]]||'').trim():'';
+        const pos=entries.findIndex(x=>x.date===date);
+        const oldPhotos = pos>=0 ? (entries[pos].photos||{}) : {breakfast:[],lunch:[],snack:[],dinner:[]};
+        const newEntry = {
+          id: pos>=0 ? entries[pos].id : uid(),
+          date,
+          wakePlan:get('wakePlan'), wake:get('wake'),
+          bedPlan:get('bedPlan'), bed:get('bed'),
+          weight:get('weight'), steps:get('steps'),
+          breakfastPlan:get('breakfastPlan'), breakfastTime:get('breakfastTime'), breakfast:get('breakfast'),
+          lunchPlan:get('lunchPlan'), lunchTime:get('lunchTime'), lunch:get('lunch'),
+          snackPlan:get('snackPlan'), snackTime:get('snackTime'), snack:get('snack'),
+          dinnerPlan:get('dinnerPlan'), dinnerTime:get('dinnerTime'), dinner:get('dinner'),
+          photos: oldPhotos
+        };
+        if(pos>=0) entries[pos]=newEntry; else entries.push(newEntry);
+        added++;
+      }
+      save(entries);renderList();toast('Импортировано: '+added);
+    }catch(err){toast('Ошибка импорта: '+err.message);}
+    ev.target.value='';
+  };
+  reader.readAsText(file,'utf-8');
+}
+
+/* ============ Старт ============ */
+document.addEventListener('DOMContentLoaded',()=>{
+  applyTheme(document.documentElement.dataset.theme || 'light');
+  document.getElementById('today').textContent=fmtDate(todayISO());
+  document.getElementById('date').value=todayISO();
+  renderFormPhotos();
+  renderList();
+});
+</script>
+</body>
+</html>
