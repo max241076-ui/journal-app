@@ -8,7 +8,6 @@
 <link rel="manifest" href="manifest.json">
 <title>Журнал дня</title>
 <script>
-/* Ставим тему до первой отрисовки — чтобы не было вспышки светлого */
 (function(){
   var saved = localStorage.getItem('journal_theme');
   var theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
@@ -75,16 +74,12 @@ button{padding:12px 16px;border:none;border-radius:8px;font-size:15px;font-weigh
 .btn-row{display:flex;gap:8px}
 .btn-row button{flex:1}
 .empty{text-align:center;color:var(--muted);padding:30px 10px;font-size:14px}
-
-/* === Meal header with plan/fact === */
 .meal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;gap:8px;flex-wrap:wrap}
 .meal-head label{margin-bottom:0}
 .meal-times{display:flex;gap:8px}
 .mt-group{display:flex;flex-direction:column;gap:2px}
 .mt-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;text-align:center}
 .meal-time{width:auto;padding:6px 8px;font-size:14px;background:var(--input-bg)}
-
-/* === Entry card === */
 .entry{background:var(--card);border-radius:var(--radius);padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.08);cursor:pointer;transition:transform .1s}
 .entry:active{transform:scale(.99)}
 .entry-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;gap:8px;flex-wrap:wrap}
@@ -96,8 +91,6 @@ button{padding:12px 16px;border:none;border-radius:8px;font-size:15px;font-weigh
 .entry-meals b{color:var(--text);font-weight:500}
 .entry-meal{margin-bottom:6px}
 .entry-meal:last-child{margin-bottom:0}
-
-/* === Badges === */
 .meal-time-tag{display:inline-block;background:var(--tag-bg);color:var(--tag-fg);padding:1px 6px;border-radius:4px;font-size:12px;font-weight:600;margin-left:4px}
 .meal-time-plan{background:var(--plan-tag-bg);color:var(--plan-tag-fg);font-style:italic;font-weight:500}
 .dev{margin-left:4px;font-size:11px;font-weight:700;padding:1px 5px;border-radius:3px;display:inline-block;vertical-align:1px}
@@ -105,8 +98,6 @@ button{padding:12px 16px;border:none;border-radius:8px;font-size:15px;font-weigh
 .dev-warn{color:var(--dev-warn-fg);background:var(--dev-warn-bg)}
 .dev-bad{color:var(--dev-bad-fg);background:var(--dev-bad-bg)}
 .meal-interval{font-size:11px;color:var(--interval-fg);padding:3px 8px;font-style:italic;text-align:center}
-
-/* === Photos === */
 .photo-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .photo-chip{position:relative;width:64px;height:64px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--photo-bg)}
 .photo-chip img{width:100%;height:100%;object-fit:cover;display:block}
@@ -115,12 +106,8 @@ button{padding:12px 16px;border:none;border-radius:8px;font-size:15px;font-weigh
 .photo-add:active{border-color:var(--accent);color:var(--accent)}
 .photo-strip{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .photo-thumb{width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:pointer;background:var(--photo-bg);display:block}
-
-/* === Viewer === */
 .viewer{position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;z-index:1000;cursor:pointer;padding:16px;animation:fadein .15s}
 .viewer img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
-
-/* === Summary modal === */
 .summary-overlay{position:fixed;inset:0;background:var(--overlay-bg);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px;animation:fadein .15s}
 .summary-modal{background:var(--card);color:var(--text);border-radius:12px;padding:20px;max-width:100%;width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.4)}
 .summary-modal h2{margin:0 0 6px;font-size:18px}
@@ -134,8 +121,6 @@ button{padding:12px 16px;border:none;border-radius:8px;font-size:15px;font-weigh
 .summary-modal td:nth-child(2){font-weight:600}
 .summary-modal td:nth-child(3){color:var(--muted);font-size:13px}
 .summary-modal .empty-msg{text-align:center;color:var(--muted);padding:30px 0}
-
-/* === Toast === */
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:10px 20px;border-radius:8px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:100;max-width:90%;border:1px solid rgba(255,255,255,.1)}
 .toast.show{opacity:1}
 @keyframes fadein{from{opacity:0}to{opacity:1}}
@@ -172,52 +157,52 @@ button{padding:12px 16px;border:none;border-radius:8px;font-size:15px;font-weigh
 
     <div class="row">
       <div class="meal-head">
-        <label for="breakfast">Завтрак</label>
+        <label for="breakfast">Приём пищи 1</label>
         <div class="meal-times">
           <div class="mt-group"><span class="mt-label">план</span><input type="time" id="breakfastPlan" class="meal-time"></div>
           <div class="mt-group"><span class="mt-label">факт</span><input type="time" id="breakfastTime" class="meal-time"></div>
         </div>
       </div>
-      <textarea id="breakfast" rows="2" placeholder="Что было на завтрак"></textarea>
+      <textarea id="breakfast" rows="2" placeholder="Что было на приёме пищи 1"></textarea>
       <div class="photo-row" id="photos-breakfast"></div>
       <input type="file" id="file-breakfast" accept="image/*" multiple style="display:none">
     </div>
 
     <div class="row">
       <div class="meal-head">
-        <label for="lunch">Обед</label>
+        <label for="lunch">Приём пищи 2</label>
         <div class="meal-times">
           <div class="mt-group"><span class="mt-label">план</span><input type="time" id="lunchPlan" class="meal-time"></div>
           <div class="mt-group"><span class="mt-label">факт</span><input type="time" id="lunchTime" class="meal-time"></div>
         </div>
       </div>
-      <textarea id="lunch" rows="2" placeholder="Что было на обед"></textarea>
+      <textarea id="lunch" rows="2" placeholder="Что было на приёме пищи 2"></textarea>
       <div class="photo-row" id="photos-lunch"></div>
       <input type="file" id="file-lunch" accept="image/*" multiple style="display:none">
     </div>
 
     <div class="row">
       <div class="meal-head">
-        <label for="snack">Полдник</label>
+        <label for="snack">Приём пищи 3</label>
         <div class="meal-times">
           <div class="mt-group"><span class="mt-label">план</span><input type="time" id="snackPlan" class="meal-time"></div>
           <div class="mt-group"><span class="mt-label">факт</span><input type="time" id="snackTime" class="meal-time"></div>
         </div>
       </div>
-      <textarea id="snack" rows="2" placeholder="Что было на полдник"></textarea>
+      <textarea id="snack" rows="2" placeholder="Что было на приёме пищи 3"></textarea>
       <div class="photo-row" id="photos-snack"></div>
       <input type="file" id="file-snack" accept="image/*" multiple style="display:none">
     </div>
 
     <div class="row">
       <div class="meal-head">
-        <label for="dinner">Ужин</label>
+        <label for="dinner">Приём пищи 4</label>
         <div class="meal-times">
           <div class="mt-group"><span class="mt-label">план</span><input type="time" id="dinnerPlan" class="meal-time"></div>
           <div class="mt-group"><span class="mt-label">факт</span><input type="time" id="dinnerTime" class="meal-time"></div>
         </div>
       </div>
-      <textarea id="dinner" rows="2" placeholder="Что было на ужин"></textarea>
+      <textarea id="dinner" rows="2" placeholder="Что было на приёме пищи 4"></textarea>
       <div class="photo-row" id="photos-dinner"></div>
       <input type="file" id="file-dinner" accept="image/*" multiple style="display:none">
     </div>
@@ -244,7 +229,6 @@ button{padding:12px 16px;border:none;border-radius:8px;font-size:15px;font-weigh
 <div class="toast" id="toast"></div>
 
 <script>
-/* ============ Тема ============ */
 const THEME_KEY = 'journal_theme';
 function applyTheme(t){
   document.documentElement.dataset.theme = t;
@@ -301,7 +285,6 @@ async function delPhoto(id){
   });
 }
 
-/* ============ Сжатие ============ */
 async function compressImage(file, maxDim=1200, quality=0.75){
   let source;
   try{ source = await createImageBitmap(file, {imageOrientation:'from-image'}); }
@@ -330,7 +313,12 @@ const KEY='journal_entries_v3';
 const OLD_KEY_V2='journal_entries_v2';
 const OLD_KEY_V1='journal_entries_v1';
 const MEALS = ['breakfast','lunch','snack','dinner'];
-const MEAL_LABELS = {breakfast:'Завтрак',lunch:'Обед',snack:'Полдник',dinner:'Ужин'};
+const MEAL_LABELS = {
+  breakfast:'Приём пищи 1',
+  lunch:'Приём пищи 2',
+  snack:'Приём пищи 3',
+  dinner:'Приём пищи 4'
+};
 const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const isoDate = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 const todayISO = () => isoDate(new Date());
@@ -362,7 +350,6 @@ const ALL_FORM_FIELDS = ['date',
 const load = () => {try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch{return[]}};
 const save = a => localStorage.setItem(KEY, JSON.stringify(a));
 
-/* ============ Время ============ */
 function minutesFromMidnight(t){
   if(!t || !t.includes(':')) return null;
   const [h,m] = t.split(':').map(Number);
@@ -409,12 +396,10 @@ function formatDiffHtml(mins){
   return ` <span class="dev ${cls}" title="${sign}${Math.round(abs)} мин">${text}</span>`;
 }
 
-/* ============ ObjectURL ============ */
 let activeUrls = [];
 const trackUrl = u => {activeUrls.push(u);return u;};
 function revokeAllUrls(){for(const u of activeUrls) URL.revokeObjectURL(u);activeUrls=[];}
 
-/* ============ Toast ============ */
 let toastTimer;
 function toast(msg){
   const t=document.getElementById('toast');
@@ -601,7 +586,6 @@ async function openViewer(photoId){
   }catch(e){console.error(e);}
 }
 
-/* ============ Форма ============ */
 function clearForm(){
   editingId = null;
   for(const meal of MEALS){
@@ -833,10 +817,10 @@ function exportCSV(){
   const q = v => {v=v==null?'':String(v);return /[";\n\r]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v;};
   const rows=[['Дата',
     'Подъём план','Подъём','Отбой план','Отбой','Вес','Шаги',
-    'Завтрак план','Время завтрака','Завтрак',
-    'Обед план','Время обеда','Обед',
-    'Полдник план','Время полдника','Полдник',
-    'Ужин план','Время ужина','Ужин','Фото']];
+    'Приём 1 план','Время приёма 1','Приём 1',
+    'Приём 2 план','Время приёма 2','Приём 2',
+    'Приём 3 план','Время приёма 3','Приём 3',
+    'Приём 4 план','Время приёма 4','Приём 4','Фото']];
   for(const e of entries){
     const p = e.photos || {};
     const cnt = MEALS.reduce((s,k)=>s+(p[k]?.length||0),0);
@@ -877,6 +861,7 @@ function importCSV(ev){
       };
       const header=parseLine(lines[0]).map(s=>s.trim());
       const find=(...names)=>{for(const n of names){const i=header.indexOf(n);if(i>=0)return i;}return -1;};
+      // Поддерживаем и старые ("Завтрак"/"Время завтрака"), и новые ("Приём 1"/"Время приёма 1") названия
       const idx={
         date: find('Дата'),
         wakePlan: find('Подъём план'),
@@ -885,18 +870,18 @@ function importCSV(ev){
         bed: find('Отбой', 'Отбой факт'),
         weight: find('Вес'),
         steps: find('Шаги'),
-        breakfastPlan: find('Завтрак план'),
-        breakfastTime: find('Время завтрака', 'Завтрак факт'),
-        breakfast: find('Завтрак'),
-        lunchPlan: find('Обед план'),
-        lunchTime: find('Время обеда', 'Обед факт'),
-        lunch: find('Обед'),
-        snackPlan: find('Полдник план'),
-        snackTime: find('Время полдника', 'Полдник факт'),
-        snack: find('Полдник'),
-        dinnerPlan: find('Ужин план'),
-        dinnerTime: find('Время ужина', 'Ужин факт'),
-        dinner: find('Ужин')
+        breakfastPlan: find('Приём 1 план','Завтрак план'),
+        breakfastTime: find('Время приёма 1','Время завтрака','Завтрак факт'),
+        breakfast: find('Приём 1','Завтрак'),
+        lunchPlan: find('Приём 2 план','Обед план'),
+        lunchTime: find('Время приёма 2','Время обеда','Обед факт'),
+        lunch: find('Приём 2','Обед'),
+        snackPlan: find('Приём 3 план','Полдник план'),
+        snackTime: find('Время приёма 3','Время полдника','Полдник факт'),
+        snack: find('Приём 3','Полдник'),
+        dinnerPlan: find('Приём 4 план','Ужин план'),
+        dinnerTime: find('Время приёма 4','Время ужина','Ужин факт'),
+        dinner: find('Приём 4','Ужин')
       };
       if(idx.date<0)throw new Error('Нет колонки "Дата"');
       const entries=load();
@@ -930,7 +915,6 @@ function importCSV(ev){
   reader.readAsText(file,'utf-8');
 }
 
-/* ============ Старт ============ */
 document.addEventListener('DOMContentLoaded',()=>{
   applyTheme(document.documentElement.dataset.theme || 'light');
   document.getElementById('today').textContent=fmtDate(todayISO());
