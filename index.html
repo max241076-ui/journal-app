@@ -761,10 +761,10 @@ async function saveForm(){
   }else{
     entries.push(entry);
   }
-  save(entries);
+   save(entries);
   toast('Сохранено');
-  clearForm();
   renderList();
+  editEntry(entry.id);
 }
 
 /* ============ Сводка ============ */
