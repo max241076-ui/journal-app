@@ -978,6 +978,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('date').value=todayISO();
   renderFormPhotos();
   renderList();
+  // Если на сегодня уже есть запись — подгружаем её в форму
+  const todayEntry = load().find(e => e.date === todayISO());
+  if(todayEntry){
+    editEntry(todayEntry.id);
+  }
 });
 </script>
 </body>
