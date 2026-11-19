@@ -972,12 +972,58 @@ function importCSV(ev){
   reader.readAsText(file,'utf-8');
 }
 
+/* ============ Автозаполнение плана: +4 часа от факта предыдущего приёма ============ */
+const AUTO_PLAN_GAP_MIN = 4 * 60;
+
+function addMinutesToTime(t, mins){
+  const m = minutesFromMidnight(t);
+  if(m === null) return '';
+  const total = (m + mins) % (24*60);
+  const h = Math.floor(total / 60);
+  const mm = total % 60;
+  return String(h).padStart(2,'0') + ':' + String(mm).padStart(2,'0');
+}
+
+function setupAutoPlan(){
+  const pairs = [
+    ['breakfastTime', 'lunchPlan'],
+    ['lunchTime',     'snackPlan'],
+    ['snackTime',     'dinnerPlan']
+  ];
+  for(const [factId, planId] of pairs){
+    const factEl = document.getElementById(factId);
+    const planEl = document.getElementById(planId);
+    if(!factEl || !planEl) continue;
+
+    planEl.dataset.autoFilled = '';
+    planEl.addEventListener('input', ()=>{
+      planEl.dataset.autoFilled = 'manual';
+    });
+
+    factEl.addEventListener('input', ()=>{
+      const factVal = factEl.value;
+      if(!factVal){
+        if(planEl.dataset.autoFilled === 'true'){
+          planEl.value = '';
+          planEl.dataset.autoFilled = '';
+        }
+        return;
+      }
+      if(!planEl.value || planEl.dataset.autoFilled === 'true'){
+        planEl.value = addMinutesToTime(factVal, AUTO_PLAN_GAP_MIN);
+        planEl.dataset.autoFilled = 'true';
+      }
+    });
+  }
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
   applyTheme(document.documentElement.dataset.theme || 'light');
   document.getElementById('today').textContent=fmtDate(todayISO());
   document.getElementById('date').value=todayISO();
   renderFormPhotos();
   renderList();
+  setupAutoPlan();
   // Если на сегодня уже есть запись — подгружаем её в форму
   const todayEntry = load().find(e => e.date === todayISO());
   if(todayEntry){
